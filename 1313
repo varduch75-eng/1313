@@ -97,12 +97,14 @@ local Passed, Statement = pcall(function()
 				DisplayOrder = 9999,
 				Enabled = true,
 				IgnoreGuiInset = true,
+				Modal = false, -- Не блокируем ввод за пределами GUI
 				Parent = cre,
 				ResetOnSpawn = false,
 				ZIndexBehavior = "Global"
 			})
 			-- //
 			local ScreenGui_MainFrame = utility:RenderObject("Frame", {
+				Active = false, -- Не блокируем ввод
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				BackgroundColor3 = Color3.fromRGB(25, 25, 25),
 				BackgroundTransparency = 0,
@@ -115,6 +117,7 @@ local Passed, Statement = pcall(function()
 			})
 			-- //
 			local ScreenGui_MainFrame_InnerBorder = utility:RenderObject("Frame", {
+				Active = false, -- Не блокируем ввод
 				BackgroundColor3 = Color3.fromRGB(40, 40, 40),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(0, 0, 0),
@@ -125,6 +128,7 @@ local Passed, Statement = pcall(function()
 			})
 			-- //
 			local MainFrame_InnerBorder_InnerFrame = utility:RenderObject("Frame", {
+				Active = false, -- Не блокируем ввод
 				BackgroundColor3 = Color3.fromRGB(12, 12, 12),
 				BackgroundTransparency = 0,
 				BorderColor3 = Color3.fromRGB(60, 60, 60),
@@ -146,6 +150,7 @@ local Passed, Statement = pcall(function()
 			})
 			--
 			local InnerBorder_InnerFrame_Pages = utility:RenderObject("Frame", {
+				Active = false, -- Не блокируем ввод
 				AnchorPoint = Vector2.new(1, 0),
 				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				BackgroundTransparency = 0,
@@ -290,37 +295,55 @@ local Passed, Statement = pcall(function()
 			end
 			--
 			do -- // Connections
-				-- Простой и надежный drag функционал
-				local dragging = false
-				local dragStart = nil
-				local startPos = nil
-				
-				-- Делаем весь фрейм перетаскиваемым
-				ScreenGui_MainFrame.Active = true
-				ScreenGui_MainFrame.Draggable = true
-				
-				-- Альтернативный drag через события (если Draggable не работает)
-				utility:CreateConnection(ScreenGui_MainFrame.InputBegan, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				-- Улучшенный drag функционал без блокировки ввода
+				local function MakeDraggable(Instance, Cutoff)
+					local dragging = false
+					local dragStart = nil
+					local startPos = nil
+					
+					-- Создаем невидимую кнопку для drag области
+					local DragButton = utility:RenderObject("TextButton", {
+						BackgroundTransparency = 1,
+						Parent = Instance,
+						Position = UDim2.new(0, 0, 0, 0),
+						Size = UDim2.new(1, 0, 0, Cutoff or 30),
+						Text = "",
+						ZIndex = 1000
+					})
+					
+					local function updateDrag(input)
+						if dragging then
+							local delta = input.Position - dragStart
+							Instance.Position = UDim2.new(
+								startPos.X.Scale,
+								startPos.X.Offset + delta.X,
+								startPos.Y.Scale,
+								startPos.Y.Offset + delta.Y
+							)
+						end
+					end
+					
+					utility:CreateConnection(DragButton.MouseButton1Down, function()
 						dragging = true
-						dragStart = utility:MouseLocation()
-						startPos = ScreenGui_MainFrame.Position
-					end
-				end)
-				
-				utility:CreateConnection(uis.InputChanged, function(input)
-					if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-						local mouse = utility:MouseLocation()
-						local delta = Vector2.new(mouse.X - dragStart.X, mouse.Y - dragStart.Y)
-						ScreenGui_MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-					end
-				end)
-				
-				utility:CreateConnection(uis.InputEnded, function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = false
-					end
-				end)
+						dragStart = uis:GetMouseLocation()
+						startPos = Instance.Position
+					end)
+					
+					utility:CreateConnection(uis.InputChanged, function(input)
+						if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+							updateDrag(input)
+						end
+					end)
+					
+					utility:CreateConnection(uis.InputEnded, function(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 then
+							dragging = false
+						end
+					end)
+				end
+
+				-- Применяем drag к главному фрейму
+				MakeDraggable(ScreenGui_MainFrame, 30)
 				
 				-- Menu toggle and unload connections
 				utility:CreateConnection(uis.InputBegan, function(Input)
@@ -706,6 +729,7 @@ local Passed, Statement = pcall(function()
 			})
 			--
 			local Holder_Frame_ContentHolder = utility:RenderObject("ScrollingFrame", {
+				Active = false, -- Не блокируем ввод
 				BackgroundColor3 = Color3.fromRGB(0, 0, 0),
 				BackgroundTransparency = 1,
 				BorderColor3 = Color3.fromRGB(0, 0, 0),
@@ -2132,7 +2156,7 @@ local Passed, Statement = pcall(function()
 			Properties = Properties or {}
 			--
 			local Content = {
-				Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Toggle"),
+				Name = (Properties.name or Properties.Name or Properties.title or Properties.Title or "New Colorpicker"),
 				State = (Properties.state or Properties.State or Properties.def or Properties.Def or Properties.default or Properties.Default or Color3.fromRGB(255, 255, 255)),
 				Callback = (Properties.callback or Properties.Callback or Properties.callBack or Properties.CallBack or function() end),
 				Content = {
@@ -2251,9 +2275,25 @@ local Passed, Statement = pcall(function()
 						local Connections = {}
 						local InputCheck
 						
-						-- Простой колорпикер с RGB слайдерами
+						-- Простой и надежный колорпикер
 						local currentColor = Content.State
-						local r, g, b = math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255)
+						local r = math.floor(currentColor.R * 255)
+						local g = math.floor(currentColor.G * 255) 
+						local b = math.floor(currentColor.B * 255)
+						
+						-- Размеры и позиция
+						local pickerWidth, pickerHeight = 200, 160
+						local baseX = Content_Holder_Outline.AbsolutePosition.X - Content.Section.Extra.AbsolutePosition.X
+						local baseY = Content_Holder_Outline.AbsolutePosition.Y - Content.Section.Extra.AbsolutePosition.Y + 15
+						
+						-- Проверка границ экрана
+						local screenSize = workspace.CurrentCamera.ViewportSize
+						if baseX + pickerWidth > screenSize.X then
+							baseX = screenSize.X - pickerWidth - 10
+						end
+						if baseY + pickerHeight > screenSize.Y then
+							baseY = baseY - pickerHeight - 30
+						end
 						
 						local Content_Open_Holder = utility:RenderObject("Frame", {
 							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
@@ -2261,16 +2301,15 @@ local Passed, Statement = pcall(function()
 							BorderColor3 = Color3.fromRGB(0, 0, 0),
 							BorderSizePixel = 0,
 							Parent = Content.Section.Extra,
-							Position = UDim2.new(0, Content_Holder_Outline.AbsolutePosition.X - Content.Section.Extra.AbsolutePosition.X, 0, Content_Holder_Outline.AbsolutePosition.Y - Content.Section.Extra.AbsolutePosition.Y + 10),
-							Size = UDim2.new(0, 200, 0, 150),
+							Position = UDim2.new(0, baseX, 0, baseY),
+							Size = UDim2.new(0, pickerWidth, 0, pickerHeight),
 							ZIndex = 6
 						})
 						
 						local Open_Holder_Outline = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
 							BackgroundTransparency = 0,
 							BorderColor3 = Color3.fromRGB(12, 12, 12),
-							BorderMode = "Inset",
 							BorderSizePixel = 1,
 							Parent = Content_Open_Holder,
 							Size = UDim2.new(1, 0, 1, 0),
@@ -2278,7 +2317,7 @@ local Passed, Statement = pcall(function()
 						})
 						
 						local Open_Outline_Frame = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+							BackgroundColor3 = Color3.fromRGB(30, 30, 30),
 							BackgroundTransparency = 0,
 							BorderColor3 = Color3.fromRGB(0, 0, 0),
 							BorderSizePixel = 0,
@@ -2292,11 +2331,11 @@ local Passed, Statement = pcall(function()
 						local ColorPreview = utility:RenderObject("Frame", {
 							BackgroundColor3 = currentColor,
 							BackgroundTransparency = 0,
-							BorderColor3 = Color3.fromRGB(12, 12, 12),
+							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
 							Position = UDim2.new(0, 10, 0, 10),
-							Size = UDim2.new(1, -20, 0, 25),
+							Size = UDim2.new(1, -20, 0, 20),
 							ZIndex = 7
 						})
 						
@@ -2309,9 +2348,9 @@ local Passed, Statement = pcall(function()
 						
 						-- RGB слайдеры
 						local sliders = {
-							{name = "R", value = r, color = Color3.fromRGB(255, 100, 100), y = 45},
-							{name = "G", value = g, color = Color3.fromRGB(100, 255, 100), y = 70},
-							{name = "B", value = b, color = Color3.fromRGB(100, 100, 255), y = 95}
+							{name = "R", value = r, color = Color3.fromRGB(255, 80, 80), y = 40},
+							{name = "G", value = g, color = Color3.fromRGB(80, 255, 80), y = 65},
+							{name = "B", value = b, color = Color3.fromRGB(80, 80, 255), y = 90}
 						}
 						
 						for i, slider in ipairs(sliders) do
@@ -2324,15 +2363,15 @@ local Passed, Statement = pcall(function()
 								ZIndex = 7,
 								Font = "Code",
 								Text = slider.name,
-								TextColor3 = Color3.fromRGB(255, 255, 255),
+								TextColor3 = Color3.fromRGB(200, 200, 200),
 								TextSize = 10,
 								TextXAlignment = "Left"
 							})
 							
 							-- Слайдер фон
 							local SliderBg = utility:RenderObject("Frame", {
-								BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-								BorderColor3 = Color3.fromRGB(12, 12, 12),
+								BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+								BorderColor3 = Color3.fromRGB(60, 60, 60),
 								BorderSizePixel = 1,
 								Parent = Open_Outline_Frame,
 								Position = UDim2.new(0, 30, 0, slider.y),
@@ -2354,12 +2393,12 @@ local Passed, Statement = pcall(function()
 							local ValueLabel = utility:RenderObject("TextLabel", {
 								BackgroundTransparency = 1,
 								Parent = Open_Outline_Frame,
-								Position = UDim2.new(0, 135, 0, slider.y),
-								Size = UDim2.new(0, 30, 0, 15),
+								Position = UDim2.new(0, 140, 0, slider.y),
+								Size = UDim2.new(0, 40, 0, 15),
 								ZIndex = 7,
 								Font = "Code",
 								Text = tostring(slider.value),
-								TextColor3 = Color3.fromRGB(200, 200, 200),
+								TextColor3 = Color3.fromRGB(180, 180, 180),
 								TextSize = 9,
 								TextXAlignment = "Center"
 							})
@@ -2386,9 +2425,13 @@ local Passed, Statement = pcall(function()
 									local percentage = relativeX / SliderBg.AbsoluteSize.X
 									local newValue = math.floor(percentage * 255)
 									
-									if slider.name == "R" then r = newValue
-									elseif slider.name == "G" then g = newValue
-									elseif slider.name == "B" then b = newValue end
+									if slider.name == "R" then 
+										r = newValue
+									elseif slider.name == "G" then 
+										g = newValue
+									elseif slider.name == "B" then 
+										b = newValue 
+									end
 									
 									SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
 									ValueLabel.Text = tostring(newValue)
@@ -2403,28 +2446,28 @@ local Passed, Statement = pcall(function()
 							end)
 						end
 						
-						-- Кнопки Accept/Cancel
+						-- Кнопки
 						local AcceptButton = utility:RenderObject("TextButton", {
-							BackgroundColor3 = Color3.fromRGB(50, 120, 50),
-							BorderColor3 = Color3.fromRGB(12, 12, 12),
+							BackgroundColor3 = Color3.fromRGB(60, 120, 60),
+							BorderColor3 = Color3.fromRGB(80, 80, 80),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
 							Position = UDim2.new(0, 10, 1, -25),
-							Size = UDim2.new(0, 70, 0, 20),
+							Size = UDim2.new(0, 60, 0, 18),
 							ZIndex = 7,
 							Font = "Code",
-							Text = "Accept",
+							Text = "OK",
 							TextColor3 = Color3.fromRGB(255, 255, 255),
 							TextSize = 9
 						})
 						
 						local CancelButton = utility:RenderObject("TextButton", {
-							BackgroundColor3 = Color3.fromRGB(120, 50, 50),
-							BorderColor3 = Color3.fromRGB(12, 12, 12),
+							BackgroundColor3 = Color3.fromRGB(120, 60, 60),
+							BorderColor3 = Color3.fromRGB(80, 80, 80),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
-							Position = UDim2.new(1, -80, 1, -25),
-							Size = UDim2.new(0, 70, 0, 20),
+							Position = UDim2.new(1, -70, 1, -25),
+							Size = UDim2.new(0, 60, 0, 18),
 							ZIndex = 7,
 							Font = "Code",
 							Text = "Cancel",
@@ -2437,7 +2480,7 @@ local Passed, Statement = pcall(function()
 						end)
 						
 						Connections[#Connections + 1] = utility:CreateConnection(CancelButton.MouseButton1Click, function()
-							Content:Set(currentColor) -- Возвращаем исходный цвет
+							Content:Set(currentColor)
 							Content.Section:CloseContent()
 						end)
 						
@@ -2463,10 +2506,10 @@ local Passed, Statement = pcall(function()
 						InputCheck = utility:CreateConnection(uis.InputBegan, function(Input)
 							if Content.Content.Open and Input.UserInputType == Enum.UserInputType.MouseButton1 then
 								local Mouse = utility:MouseLocation()
-								if not (Mouse.X > Content_Open_Holder.AbsolutePosition.X and 
-								        Mouse.Y > Content_Open_Holder.AbsolutePosition.Y and 
-								        Mouse.X < (Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X) and 
-								        Mouse.Y < (Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y)) then
+								if not (Mouse.X >= Content_Open_Holder.AbsolutePosition.X and 
+								        Mouse.Y >= Content_Open_Holder.AbsolutePosition.Y and 
+								        Mouse.X <= (Content_Open_Holder.AbsolutePosition.X + Content_Open_Holder.AbsoluteSize.X) and 
+								        Mouse.Y <= (Content_Open_Holder.AbsolutePosition.Y + Content_Open_Holder.AbsoluteSize.Y)) then
 									Content.Section:CloseContent()
 								end
 							end
