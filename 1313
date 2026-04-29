@@ -51,6 +51,14 @@ local Passed, Statement = pcall(function()
 		return Connection
 	end
 	--
+	function utility:RegisterElement(element, sectionName, elementName, defaultValue)
+		-- Регистрируем элемент в SaveManager если он доступен
+		if library.SaveManager then
+			local fullName = sectionName .. "_" .. elementName
+			library.SaveManager:RegisterElement(fullName, element, defaultValue)
+		end
+	end
+	--
 	function utility:MouseLocation()
 		return uis:GetMouseLocation()
 	end
@@ -281,7 +289,7 @@ local Passed, Statement = pcall(function()
 				function Window:InitSaveManager()
 					-- Load SaveManager if available
 					local success, SaveManager = pcall(function()
-						return loadstring(game:HttpGet("https://raw.githubusercontent.com/varduch75-eng/7979/refs/heads/main/SaveManager"))()
+						return loadstring(game:HttpGet("https://raw.githubusercontent.com/varduch75-eng/1313/refs/heads/main/SaveManager"))()
 					end)
 					
 					if success and SaveManager then
@@ -290,7 +298,7 @@ local Passed, Statement = pcall(function()
 						print("✅ SaveManager loaded successfully!")
 						return library.SaveManager
 					else
-						warn("❌ Failed to load SaveManager")
+						warn("❌ Failed to load SaveManager:", SaveManager)
 						return nil
 					end
 				end
