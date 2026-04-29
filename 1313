@@ -52,11 +52,8 @@ local Passed, Statement = pcall(function()
 	end
 	--
 	function utility:RegisterElement(element, sectionName, elementName, defaultValue)
-		-- Регистрируем элемент в SaveManager если он доступен
-		if library.SaveManager then
-			local fullName = sectionName .. "_" .. elementName
-			library.SaveManager:RegisterElement(fullName, element, defaultValue)
-		end
+		-- Эта функция больше не нужна, так как мы регистрируем элементы вручную
+		-- Оставляем для совместимости
 	end
 	--
 	function utility:MouseLocation()
@@ -284,23 +281,6 @@ local Passed, Statement = pcall(function()
 					--
 					library = nil
 					utility = nil
-				end
-				--
-				function Window:InitSaveManager()
-					-- Load SaveManager if available
-					local success, SaveManager = pcall(function()
-						return loadstring(game:HttpGet("https://raw.githubusercontent.com/varduch75-eng/1313/refs/heads/main/SaveManager"))()
-					end)
-					
-					if success and SaveManager then
-						library.SaveManager = SaveManager.new(library)
-						library.SaveManager:Initialize()
-						print("✅ SaveManager loaded successfully!")
-						return library.SaveManager
-					else
-						warn("❌ Failed to load SaveManager:", SaveManager)
-						return nil
-					end
 				end
 			end
 			--
