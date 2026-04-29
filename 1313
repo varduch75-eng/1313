@@ -286,17 +286,28 @@ local Passed, Statement = pcall(function()
 				local dragStart = nil
 				local startPos = nil
 				
-				utility:CreateConnection(ScreenGui_MainFrame.InputBegan, function(input)
+				-- Делаем фрейм активным для получения input событий
+				ScreenGui_MainFrame.Active = true
+				
+				utility:CreateConnection(uis.InputBegan, function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = true
-						dragStart = input.Position
-						startPos = ScreenGui_MainFrame.Position
+						local mouse = utility:MouseLocation()
+						-- Проверяем что клик внутри окна
+						if mouse.X >= ScreenGui_MainFrame.AbsolutePosition.X and 
+						   mouse.X <= ScreenGui_MainFrame.AbsolutePosition.X + ScreenGui_MainFrame.AbsoluteSize.X and
+						   mouse.Y >= ScreenGui_MainFrame.AbsolutePosition.Y and 
+						   mouse.Y <= ScreenGui_MainFrame.AbsolutePosition.Y + ScreenGui_MainFrame.AbsoluteSize.Y then
+							dragging = true
+							dragStart = mouse
+							startPos = ScreenGui_MainFrame.Position
+						end
 					end
 				end)
 				
-				utility:CreateConnection(ScreenGui_MainFrame.InputChanged, function(input)
+				utility:CreateConnection(uis.InputChanged, function(input)
 					if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-						local delta = input.Position - dragStart
+						local mouse = utility:MouseLocation()
+						local delta = Vector2.new(mouse.X - dragStart.X, mouse.Y - dragStart.Y)
 						ScreenGui_MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 					end
 				end)
@@ -309,11 +320,11 @@ local Passed, Statement = pcall(function()
 				
 				-- Original connections
 				utility:CreateConnection(uis.InputBegan, function(Input)
-					-- Встроенная клавиша отключена, используется кейбинд из настроек
-					-- if Input.KeyCode and Input.KeyCode == Window.Key then
-					--	Window.Enabled = not Window.Enabled
-					--	Window:Fade(Window.Enabled)
-					if Input.KeyCode and Input.KeyCode == Enum.KeyCode.X then
+					if Input.KeyCode and Input.KeyCode == Window.Key then
+						Window.Enabled = not Window.Enabled
+						--
+						Window:Fade(Window.Enabled)
+					elseif Input.KeyCode and Input.KeyCode == Enum.KeyCode.X then
 						Window:Unload()
 					end
 				end)
