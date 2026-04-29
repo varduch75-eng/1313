@@ -1,0 +1,323 @@
+-- [[ // GameSense Config System // ]]
+-- Inspired by Linoria SaveManager but adapted for GameSense UI
+
+local SaveManager = {}
+SaveManager.__index = SaveManager
+
+-- Создаем новый SaveManager
+function SaveManager.new(library)
+    local self = setmetatable({}, SaveManager)
+    
+    self.Library = library
+    self.Folder = "GameSenseConfigs"
+    self.Elements = {}
+    self.CurrentConfig = "default"
+    self.AutoSaveEnabled = false
+    
+    -- Создаем папку для конфигов
+    pcall(function()
+        if not isfolder(self.Folder) then
+            makefolder(self.Folder)
+        end
+    end)
+    
+    return self
+end
+
+-- Регистрация элемента для сохранения
+function SaveManager:RegisterElement(name, element, defaultValue)
+    self.Elements[name] = {
+        Element = element,
+        DefaultValue = defaultValue
+    }
+end
+
+-- Автоматическая регистрация всех элементов библиотеки
+function SaveManager:BuildConfigSection(configSection)
+    -- Dropdown для выбора конфига
+    local configList = configSection:CreateDropdown({
+        Name = "Config List",
+        State = 1,
+        Options = self:GetConfigNames()
+    })
+    
+    -- Текстбокс для имени нового конфига (пока используем как заглушку)
+    configSection:CreateToggle({Name = "Config Name: [Enter name]", State = false})
+    
+    -- Кнопки управления конфигами
+    configSection:CreateButton({
+        Name = "Save Config",
+        Callback = function()
+            local configName = self.CurrentConfig
+            if self:SaveConfig(configName) then
+                -- Обновляем список конфигов
+                configList.Options = self:GetConfigNames()
+            end
+        end
+    })
+    
+    configSection:CreateButton({
+        Name = "Load Config", 
+        Callback = function()
+            local selectedIndex = configList:Get()
+            local configNames = self:GetConfigNames()
+            if configNames[selectedIndex] then
+                self:LoadConfig(configNames[selectedIndex])
+            end
+        end
+    })
+    
+    configSection:CreateButton({
+        Name = "Delete Config",
+        Callback = function()
+            local selectedIndex = configList:Get()
+            local configNames = self:GetConfigNames()
+            if configNames[selectedIndex] and configNames[selectedIndex] ~= "default" then
+                if self:DeleteConfig(configNames[selectedIndex]) then
+                    configList.Options = self:GetConfigNames()
+                end
+            end
+        end
+    })
+    
+    configSection:CreateButton({
+        Name = "Reset Config",
+        Callback = function()
+            self:ResetConfig()
+        end
+    })
+    
+    configSection:CreateButton({
+        Name = "Export to Clipboard",
+        Callback = function()
+            local selectedIndex = configList:Get()
+            local configNames = self:GetConfigNames()
+            if configNames[selectedIndex] then
+                self:ExportConfig(configNames[selectedIndex])
+            end
+        end
+    })
+    
+    configSection:CreateButton({
+        Name = "Import from Clipboard", 
+        Callback = function()
+            local timestamp = os.date("%H%M%S")
+            self:ImportConfig("imported_" .. timestamp)
+            configList.Options = self:GetConfigNames()
+        end
+    })
+    
+    -- Автосохранение
+    configSection:CreateToggle({
+        Name = "Auto Save",
+        State = false,
+        Callback = function(state)
+            self.AutoSaveEnabled = state
+        end
+    })
+end
+
+-- Сохранение конфига
+function SaveManager:SaveConfig(name)
+    name = name or self.CurrentConfig
+    local config = {}
+    
+    -- Собираем данные всех зарегистрированных элементов
+    for elementName, data in pairs(self.Elements) do
+        local element = data.Element
+        if element and element.Get then
+            local success, value = pcall(function()
+                return element:Get()
+            end)
+            if success then
+                config[elementName] = value
+            end
+        end
+    end
+    
+    -- Сохраняем в файл
+    local success, result = pcall(function()
+        local json = game:GetService("HttpService"):JSONEncode(config)
+        writefile(self.Folder .. "/" .. name .. ".json", json)
+    end)
+    
+    if success then
+        print("✅ Config '" .. name .. "' saved successfully!")
+        self.CurrentConfig = name
+        return true
+    else
+        warn("❌ Failed to save config: " .. tostring(result))
+        return false
+    end
+end
+
+-- Загрузка конфига
+function SaveManager:LoadConfig(name)
+    name = name or self.CurrentConfig
+    
+    local success, fileContent = pcall(function()
+        return readfile(self.Folder .. "/" .. name .. ".json")
+    end)
+    
+    if not success then
+        warn("❌ Config '" .. name .. "' not found!")
+        return false
+    end
+    
+    local config
+    success, config = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(fileContent)
+    end)
+    
+    if not success then
+        warn("❌ Failed to parse config: " .. tostring(config))
+        return false
+    end
+    
+    -- Применяем данные к элементам
+    for elementName, value in pairs(config) do
+        local data = self.Elements[elementName]
+        if data and data.Element and data.Element.Set then
+            pcall(function()
+                data.Element:Set(value)
+            end)
+        end
+    end
+    
+    self.CurrentConfig = name
+    print("✅ Config '" .. name .. "' loaded successfully!")
+    return true
+end
+
+-- Получение списка имен конфигов
+function SaveManager:GetConfigNames()
+    local configs = {"default"}
+    local success, files = pcall(function()
+        return listfiles(self.Folder)
+    end)
+    
+    if success then
+        for _, file in pairs(files) do
+            local name = file:match("([^/\\]+)%.json$")
+            if name and name ~= "default" then
+                table.insert(configs, name)
+            end
+        end
+    end
+    
+    return configs
+end
+
+-- Удаление конфига
+function SaveManager:DeleteConfig(name)
+    if name == "default" then
+        warn("❌ Cannot delete default config!")
+        return false
+    end
+    
+    local success, result = pcall(function()
+        delfile(self.Folder .. "/" .. name .. ".json")
+    end)
+    
+    if success then
+        print("✅ Config '" .. name .. "' deleted successfully!")
+        return true
+    else
+        warn("❌ Failed to delete config: " .. tostring(result))
+        return false
+    end
+end
+
+-- Сброс конфига к значениям по умолчанию
+function SaveManager:ResetConfig()
+    for elementName, data in pairs(self.Elements) do
+        local element = data.Element
+        local defaultValue = data.DefaultValue
+        
+        if element and element.Set and defaultValue ~= nil then
+            pcall(function()
+                element:Set(defaultValue)
+            end)
+        end
+    end
+    print("✅ Config reset to default values!")
+end
+
+-- Экспорт конфига в буфер обмена
+function SaveManager:ExportConfig(name)
+    name = name or self.CurrentConfig
+    
+    local success, fileContent = pcall(function()
+        return readfile(self.Folder .. "/" .. name .. ".json")
+    end)
+    
+    if success then
+        pcall(function()
+            setclipboard(fileContent)
+        end)
+        print("✅ Config '" .. name .. "' exported to clipboard!")
+        return true
+    else
+        warn("❌ Failed to export config!")
+        return false
+    end
+end
+
+-- Импорт конфига из буфера обмена
+function SaveManager:ImportConfig(name)
+    name = name or "imported_" .. os.time()
+    
+    local success, clipboardContent = pcall(function()
+        return getclipboard()
+    end)
+    
+    if not success then
+        warn("❌ Failed to get clipboard content!")
+        return false
+    end
+    
+    -- Проверяем что это валидный JSON
+    local config
+    success, config = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(clipboardContent)
+    end)
+    
+    if not success then
+        warn("❌ Invalid config format in clipboard!")
+        return false
+    end
+    
+    -- Сохраняем импортированный конфиг
+    success = pcall(function()
+        writefile(self.Folder .. "/" .. name .. ".json", clipboardContent)
+    end)
+    
+    if success then
+        print("✅ Config imported as '" .. name .. "'!")
+        return true
+    else
+        warn("❌ Failed to save imported config!")
+        return false
+    end
+end
+
+-- Автосохранение (вызывается при изменении элементов)
+function SaveManager:AutoSave()
+    if self.AutoSaveEnabled then
+        self:SaveConfig("autosave")
+    end
+end
+
+-- Инициализация с автоматической регистрацией элементов
+function SaveManager:Initialize()
+    -- Создаем дефолтный конфиг если его нет
+    if not isfile(self.Folder .. "/default.json") then
+        self:SaveConfig("default")
+    end
+    
+    print("🔧 SaveManager initialized!")
+    print("📁 Config folder: " .. self.Folder)
+    print("📋 Available configs: " .. table.concat(self:GetConfigNames(), ", "))
+end
+
+return SaveManager
