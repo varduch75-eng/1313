@@ -37,6 +37,29 @@ local Passed, Statement = pcall(function()
 				end
 			end
 		end
+		
+		-- Принудительно отключаем блокировку ввода для всех GUI элементов
+		pcall(function()
+			if Render:IsA("GuiObject") then
+				Render.Active = false
+			end
+			if Render:IsA("ScreenGui") then
+				Render.Modal = false
+			end
+			-- Для TextButton элементов также отключаем AutoButtonColor
+			if Render:IsA("TextButton") then
+				Render.AutoButtonColor = false
+				Render.Active = false
+			end
+			-- Для Frame элементов
+			if Render:IsA("Frame") then
+				Render.Active = false
+			end
+			-- Для ScrollingFrame элементов
+			if Render:IsA("ScrollingFrame") then
+				Render.Active = false
+			end
+		end)
 		--
 		library.Renders[#library.Renders + 1] = {Render, RenderProperties, RenderHidden, RenderProperties["RenderTime"] or nil}
 		--
@@ -94,13 +117,12 @@ local Passed, Statement = pcall(function()
 		--
 		do
 			local ScreenGui = utility:RenderObject("ScreenGui", {
-				DisplayOrder = 9999,
+				DisplayOrder = 100, -- Снижаем с 9999 до 100
 				Enabled = true,
 				IgnoreGuiInset = true,
-				Modal = false, -- Не блокируем ввод за пределами GUI
 				Parent = cre,
 				ResetOnSpawn = false,
-				ZIndexBehavior = "Global"
+				ZIndexBehavior = "Sibling"
 			})
 			-- //
 			local ScreenGui_MainFrame = utility:RenderObject("Frame", {
@@ -345,8 +367,11 @@ local Passed, Statement = pcall(function()
 				-- Применяем drag к главному фрейму
 				MakeDraggable(ScreenGui_MainFrame, 30)
 				
-				-- Menu toggle and unload connections
-				utility:CreateConnection(uis.InputBegan, function(Input)
+				-- Menu toggle and unload connections (защищены от блокировки игры)
+				utility:CreateConnection(uis.InputBegan, function(Input, gameProcessedEvent)
+					-- НЕ обрабатываем, если игра уже обработала событие (например, чат открыт)
+					if gameProcessedEvent then return end
+					
 					if Input.KeyCode and Input.KeyCode == Window.Key then
 						Window.Enabled = not Window.Enabled
 						Window:Fade(Window.Enabled)
@@ -2113,7 +2138,10 @@ local Passed, Statement = pcall(function()
 						Content_Holder_Value.TextColor3 = Content.Holding and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(114, 114, 114)
 					end)
                     --
-                    utility:CreateConnection(uis.InputBegan, function(Input)
+                    utility:CreateConnection(uis.InputBegan, function(Input, gameProcessedEvent)
+                        -- НЕ обрабатываем, если игра уже обработала событие (например, чат открыт)
+                        if gameProcessedEvent then return end
+                        
                         if Content.Holding then
                             local Success = Content:Change(Input.KeyCode.Name ~= "Unknown" and Input.KeyCode or Input.UserInputType)
                             --
@@ -2135,7 +2163,10 @@ local Passed, Statement = pcall(function()
                         end
                     end)
                     --
-                    utility:CreateConnection(uis.InputEnded, function(Input)
+                    utility:CreateConnection(uis.InputEnded, function(Input, gameProcessedEvent)
+                        -- НЕ обрабатываем, если игра уже обработала событие
+                        if gameProcessedEvent then return end
+                        
                         if Content:Get()[1] and Content:Get()[2] then
                             if Input.KeyCode == Enum[Content:Get()[1]][Content:Get()[2]] or Input.UserInputType == Enum[Content:Get()[1]][Content:Get()[2]] then
                                 if Content.Mode == "Hold" then
