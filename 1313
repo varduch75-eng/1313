@@ -2788,7 +2788,8 @@ local Passed, Statement = pcall(function()
 						
 						-- Палитра Saturation/Vibrance (большой квадрат)
 						local SatVibMap = utility:RenderObject("ImageLabel", {
-							BackgroundColor3 = Color3.fromHSV(h, 1, 1),
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							ImageColor3 = Color3.fromHSV(h, 1, 1),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
@@ -2875,7 +2876,7 @@ local Passed, Statement = pcall(function()
 						-- Функция обновления всех элементов
 						local function updateDisplay()
 							local newColor = Color3.fromHSV(h, s, v)
-							SatVibMap.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+							SatVibMap.ImageColor3 = Color3.fromHSV(h, 1, 1)
 							Cursor.Position = UDim2.new(s, 0, 1 - v, 0)
 							HexBox.Text = "#" .. newColor:ToHex()
 							RgbBox.Text = string.format("%d, %d, %d", math.floor(newColor.R * 255), math.floor(newColor.G * 255), math.floor(newColor.B * 255))
