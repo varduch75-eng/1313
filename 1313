@@ -2787,17 +2787,54 @@ local Passed, Statement = pcall(function()
 						})
 						
 						-- Палитра Saturation/Vibrance (большой квадрат)
-						-- Первое изображение - статичное (градиент от белого к черному)
-						local SatVibMapOuter = utility:RenderObject("ImageLabel", {
-							BackgroundTransparency = 1,
+						-- Background с цветом (меняется по Hue)
+						local SatVibMapOuter = utility:RenderObject("Frame", {
+							BackgroundColor3 = Color3.fromHSV(h, 1, 1),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
 							Position = UDim2.new(0, 10, 0, 10),
 							Size = UDim2.new(0, 180, 0, 180),
-							Image = "rbxassetid://4155801252",
-							ImageColor3 = Color3.fromHSV(h, 1, 1),
 							ZIndex = 7
+						})
+						
+						-- Saturation слой (белый с прозрачностью слева направо)
+						local SaturationLayer = utility:RenderObject("Frame", {
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							BorderSizePixel = 0,
+							Parent = SatVibMapOuter,
+							Size = UDim2.new(1, 0, 1, 0),
+							ZIndex = 8
+						})
+						
+						utility:RenderObject("UIGradient", {
+							Rotation = 270,
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 0),
+								NumberSequenceKeypoint.new(1, 1)
+							}),
+							Color = ColorSequence.new({
+								ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+								ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+							}),
+							Parent = SaturationLayer
+						})
+						
+						-- Value слой (черный с прозрачностью сверху вниз)
+						local ValueLayer = utility:RenderObject("Frame", {
+							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+							BorderSizePixel = 0,
+							Parent = SatVibMapOuter,
+							Size = UDim2.new(1, 0, 1, 0),
+							ZIndex = 8
+						})
+						
+						utility:RenderObject("UIGradient", {
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 0),
+								NumberSequenceKeypoint.new(1, 1)
+							}),
+							Parent = ValueLayer
 						})
 						
 						-- Используем SatVibMapOuter для кликов
@@ -2880,7 +2917,7 @@ local Passed, Statement = pcall(function()
 						-- Функция обновления всех элементов
 						local function updateDisplay()
 							local newColor = Color3.fromHSV(h, s, v)
-							SatVibMapOuter.ImageColor3 = Color3.fromHSV(h, 1, 1)
+							SatVibMapOuter.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
 							Cursor.Position = UDim2.new(s, 0, 1 - v, 0)
 							HexBox.Text = "#" .. newColor:ToHex()
 							RgbBox.Text = string.format("%d, %d, %d", math.floor(newColor.R * 255), math.floor(newColor.G * 255), math.floor(newColor.B * 255))
