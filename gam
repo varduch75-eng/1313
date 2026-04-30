@@ -352,7 +352,7 @@ function library:CreateWindow(Properties)
 			BorderSizePixel = 1,
 			Parent = ScreenGui,
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			Size = UDim2.new(0, 660, 0, 560)
+			Size = UDim2.new(0, 660, 0, 640)
 		})
 		utility:MakeDraggable(ScreenGui_MainFrame)
 		-- //
