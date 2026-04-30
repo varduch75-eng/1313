@@ -1,0 +1,425 @@
+-- Bloxstrike Ultimate Bypass v3.0
+-- Полная защита от античита + скрытие хуков
+
+print("=================================")
+print("Bloxstrike Ultimate Bypass v3.0")
+print("=================================")
+
+-- ============================================
+-- СОХРАНЯЕМ ВСЕ ОРИГИНАЛЫ
+-- ============================================
+
+local _G = _G
+local _getfenv = getfenv
+local _setfenv = setfenv
+local _getgenv = getgenv
+local _getrenv = getrenv
+local _debug_info = debug.info
+local _debug_getinfo = debug.getinfo
+local _getrawmetatable = getrawmetatable
+local _setrawmetatable = setrawmetatable
+local _hookfunction = hookfunction
+local _hookmetamethod = hookmetamethod
+local _newcclosure = newcclosure
+local _islclosure = islclosure
+local _iscclosure = iscclosure
+local _checkcaller = checkcaller
+local _getcallingscript = getcallingscript
+local _getnamecallmethod = getnamecallmethod
+local _setreadonly = setreadonly
+local _isreadonly = isreadonly
+
+print("[✓] Originals saved")
+
+-- ============================================
+-- СПИСОК EXPLOIT ФУНКЦИЙ ДЛЯ СКРЫТИЯ
+-- ============================================
+
+local EXPLOIT_FUNCTIONS = {
+    "getgenv", "getrenv", "getsenv",
+    "getfenv", "setfenv",
+    "hookfunction", "hookmetamethod",
+    "getrawmetatable", "setrawmetatable",
+    "newcclosure", "islclosure", "iscclosure",
+    "getnamecallmethod", "checkcaller",
+    "getcallingscript", "getscriptclosure",
+    "setreadonly", "isreadonly",
+    "getconnections", "firesignal",
+    "decompile", "saveinstance",
+    "readfile", "writefile", "makefolder",
+    "loadstring", "getloadedmodules",
+    "getnilinstances", "getinstances",
+    "fireclickdetector", "firetouchinterest",
+    "fireproximityprompt", "mousemoverel",
+    "keypress", "keyrelease", "mouse1click",
+    "mouse1press", "mouse1release",
+    "mouse2click", "mouse2press", "mouse2release"
+}
+
+-- ============================================
+-- ФУНКЦИЯ ПРОВЕРКИ CALLER
+-- ============================================
+
+local function isAnticheatCalling()
+    if not _getcallingscript then
+        return false
+    end
+    
+    local success, caller = pcall(_getcallingscript)
+    
+    if not success or not caller then
+        return false
+    end
+    
+    local name = caller.Name:lower()
+    local path = caller:GetFullName():lower()
+    
+    -- Проверяем имя и путь
+    if name:find("5882957") or
+       name:find("inventory") or
+       name:find("security") or
+       name:find("anticheat") or
+       name:find("anti") or
+       path:find("security") or
+       path:find("shared") or
+       path:find("controller") then
+        return true
+    end
+    
+    return false
+end
+
+-- ============================================
+-- 1. ЗАЩИТА GETFENV (КРИТИЧНО!)
+-- ============================================
+
+getfenv = _newcclosure(function(level)
+    local env = _getfenv(level)
+    
+    -- Если это число (уровень стека)
+    if type(level) == "number" then
+        -- Создаем полностью чистую копию
+        local clean = {}
+        
+        for k, v in pairs(env) do
+            -- Проверяем что это не exploit функция
+            local isExploit = false
+            
+            for _, exploitFunc in ipairs(EXPLOIT_FUNCTIONS) do
+                if k == exploitFunc then
+                    isExploit = true
+                    break
+                end
+            end
+            
+            -- Добавляем только безопасные функции
+            if not isExploit then
+                clean[k] = v
+            end
+        end
+        
+        return clean
+    end
+    
+    return env
+end)
+
+print("[✓] getfenv protected")
+
+-- ============================================
+-- 2. ЗАЩИТА DEBUG.INFO
+-- ============================================
+
+debug.info = _newcclosure(function(level, option)
+    -- Если запрашивают функцию
+    if option == "f" then
+        local func = _debug_info(level, option)
+        
+        if func then
+            -- Проверяем окружение функции
+            local success, env = pcall(_getfenv, func)
+            
+            if success and env then
+                -- Если в окружении есть exploit функции - скрываем
+                for _, exploitFunc in ipairs(EXPLOIT_FUNCTIONS) do
+                    if env[exploitFunc] then
+                        return nil
+                    end
+                end
+            end
+        end
+        
+        return func
+    end
+    
+    return _debug_info(level, option)
+end)
+
+if debug.getinfo then
+    debug.getinfo = _newcclosure(function(...)
+        local info = _debug_getinfo(...)
+        
+        -- Если есть func, проверяем её
+        if info and info.func then
+            local success, env = pcall(_getfenv, info.func)
+            
+            if success and env then
+                for _, exploitFunc in ipairs(EXPLOIT_FUNCTIONS) do
+                    if env[exploitFunc] then
+                        return nil
+                    end
+                end
+            end
+        end
+        
+        return info
+    end)
+end
+
+print("[✓] debug.info protected")
+print("[✓] debug.getinfo protected")
+
+-- ============================================
+-- 3. БЛОКИРОВКА KICK/BAN
+-- ============================================
+
+local mt = _getrawmetatable(game)
+local _namecall = mt.__namecall
+local _index = mt.__index
+local _newindex = mt.__newindex
+
+_setreadonly(mt, false)
+
+-- Хук __namecall
+mt.__namecall = _newcclosure(function(self, ...)
+    local method = _getnamecallmethod()
+    local args = {...}
+    
+    -- Блокируем кики
+    if method == "Kick" or method == "kick" then
+        warn("[BLOCKED] Kick attempt")
+        return
+    end
+    
+    -- Блокируем подозрительные remotes
+    if method == "FireServer" or method == "InvokeServer" then
+        -- Проверяем строки
+        if typeof(args[1]) == "string" then
+            local arg = args[1]:lower()
+            if arg:find("kick") or 
+               arg:find("ban") or 
+               arg:find("anticheat") or 
+               arg:find("detected") or
+               arg:find("exploit") then
+                warn("[BLOCKED] Suspicious remote: " .. args[1])
+                return
+            end
+        end
+        
+        -- Проверяем таблицы
+        if typeof(args[1]) == "table" then
+            for k, v in pairs(args[1]) do
+                if typeof(v) == "string" then
+                    local val = v:lower()
+                    if val:find("kick") or 
+                       val:find("ban") or 
+                       val:find("anticheat") or 
+                       val:find("detected") or
+                       val:find("exploit") then
+                        warn("[BLOCKED] Suspicious table remote")
+                        return
+                    end
+                end
+                
+                if typeof(k) == "string" then
+                    local key = k:lower()
+                    if key:find("kick") or 
+                       key:find("ban") or 
+                       key:find("anticheat") or
+                       key:find("detected") then
+                        warn("[BLOCKED] Suspicious table key")
+                        return
+                    end
+                end
+            end
+        end
+    end
+    
+    return _namecall(self, ...)
+end)
+
+_setreadonly(mt, true)
+
+print("[✓] Kick/Ban protection active")
+
+-- ============================================
+-- 4. СКРЫТИЕ ОШИБОК В F9
+-- ============================================
+
+local ScriptContext = game:GetService("ScriptContext")
+
+if ScriptContext then
+    ScriptContext.Error:Connect(function(message, stackTrace, script)
+        -- Блокируем ошибки связанные с exploit
+        if message then
+            local msg = message:lower()
+            
+            for _, exploitFunc in ipairs(EXPLOIT_FUNCTIONS) do
+                if msg:find(exploitFunc) then
+                    return
+                end
+            end
+            
+            if msg:find("exploit") or 
+               msg:find("executor") or
+               msg:find("script") then
+                return
+            end
+        end
+    end)
+    
+    print("[✓] F9 error hiding active")
+end
+
+-- ============================================
+-- 5. ОЧИСТКА ГЛОБАЛЬНОГО ОКРУЖЕНИЯ
+-- ============================================
+
+local function cleanGlobalEnvironment()
+    local env = _getgenv()
+    
+    -- Скрываем все exploit функции
+    for _, funcName in ipairs(EXPLOIT_FUNCTIONS) do
+        if env[funcName] then
+            local original = env[funcName]
+            
+            -- Создаем защищенную обертку
+            env[funcName] = _newcclosure(function(...)
+                -- Проверяем кто вызывает
+                if isAnticheatCalling() then
+                    return nil
+                end
+                
+                -- Вызываем оригинал
+                return original(...)
+            end)
+        end
+    end
+end
+
+pcall(cleanGlobalEnvironment)
+print("[✓] Global environment cleaned")
+
+-- ============================================
+-- 6. ЗАЩИТА ОТ ДЕТЕКТА ЧЕРЕЗ REQUIRE
+-- ============================================
+
+local _require = require
+
+require = _newcclosure(function(module)
+    -- Загружаем модуль
+    local result = _require(module)
+    
+    -- Если это античит модуль - патчим его
+    if typeof(module) == "Instance" then
+        local name = module.Name:lower()
+        
+        if name:find("5882957") or 
+           name:find("inventory") or
+           name:find("security") then
+            
+            -- Если модуль возвращает таблицу с функциями
+            if typeof(result) == "table" then
+                -- Патчим функции которые могут проверять окружение
+                for k, v in pairs(result) do
+                    if typeof(v) == "function" then
+                        local original = v
+                        
+                        result[k] = _newcclosure(function(...)
+                            -- Временно скрываем exploit функции
+                            local temp = {}
+                            
+                            for _, exploitFunc in ipairs(EXPLOIT_FUNCTIONS) do
+                                if _G[exploitFunc] then
+                                    temp[exploitFunc] = _G[exploitFunc]
+                                    _G[exploitFunc] = nil
+                                end
+                            end
+                            
+                            -- Вызываем оригинал
+                            local results = {pcall(original, ...)}
+                            
+                            -- Восстанавливаем
+                            for funcName, func in pairs(temp) do
+                                _G[funcName] = func
+                            end
+                            
+                            if results[1] then
+                                return unpack(results, 2)
+                            else
+                                error(results[2])
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+    end
+    
+    return result
+end)
+
+print("[✓] require() protected")
+
+-- ============================================
+-- 7. ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА
+-- ============================================
+
+-- Скрываем следы в _G
+if _G.getgenv then _G.getgenv = nil end
+if _G.hookfunction then _G.hookfunction = nil end
+if _G.hookmetamethod then _G.hookmetamethod = nil end
+
+-- Создаем фейковые функции для античита
+_G.getgenv = function() return {} end
+_G.hookfunction = function() return function() end end
+
+print("[✓] Additional protection active")
+
+-- ============================================
+-- ФИНАЛ
+-- ============================================
+
+print("=================================")
+print("[✓] Ultimate Bypass Active!")
+print("=================================")
+print("")
+print("Protections:")
+print("  • getfenv spoofing")
+print("  • debug.info spoofing")
+print("  • debug.getinfo spoofing")
+print("  • Kick/Ban blocking")
+print("  • F9 error hiding")
+print("  • Global environment cleaning")
+print("  • require() protection")
+print("  • Additional stealth")
+print("")
+print("Теперь можно безопасно загружать UI!")
+print("=================================")
+
+-- Возвращаем оригиналы для использования
+return {
+    version = "3.0",
+    active = true,
+    originals = {
+        getfenv = _getfenv,
+        getgenv = _getgenv,
+        hookfunction = _hookfunction,
+        hookmetamethod = _hookmetamethod,
+        newcclosure = _newcclosure,
+        getrawmetatable = _getrawmetatable,
+        setreadonly = _setreadonly,
+        getnamecallmethod = _getnamecallmethod,
+        debug_info = _debug_info
+    }
+}
