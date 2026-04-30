@@ -2798,15 +2798,48 @@ local Passed, Statement = pcall(function()
 							ZIndex = 7
 						})
 						
-						-- ImageLabel с градиентом поверх
-						local SatVibMap = utility:RenderObject("ImageLabel", {
-							BackgroundTransparency = 1,
+						-- Горизонтальный градиент (белый -> цвет)
+						local SaturationOverlay = utility:RenderObject("Frame", {
+							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+							BackgroundTransparency = 0,
 							BorderSizePixel = 0,
 							Parent = SatVibMapOuter,
 							Size = UDim2.new(1, 0, 1, 0),
-							Image = "rbxassetid://4155801252",
 							ZIndex = 8
 						})
+						
+						local SatGradient = utility:RenderObject("UIGradient", {
+							Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 255, 255)),
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 0),
+								NumberSequenceKeypoint.new(1, 1)
+							}),
+							Rotation = 0,
+							Parent = SaturationOverlay
+						})
+						
+						-- Вертикальный градиент (прозрачный -> черный)
+						local ValueOverlay = utility:RenderObject("Frame", {
+							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+							BackgroundTransparency = 0,
+							BorderSizePixel = 0,
+							Parent = SatVibMapOuter,
+							Size = UDim2.new(1, 0, 1, 0),
+							ZIndex = 9
+						})
+						
+						local ValGradient = utility:RenderObject("UIGradient", {
+							Color = ColorSequence.new(Color3.fromRGB(0, 0, 0), Color3.fromRGB(0, 0, 0)),
+							Transparency = NumberSequence.new({
+								NumberSequenceKeypoint.new(0, 1),
+								NumberSequenceKeypoint.new(1, 0)
+							}),
+							Rotation = 90,
+							Parent = ValueOverlay
+						})
+						
+						-- Используем SatVibMapOuter для кликов
+						local SatVibMap = SatVibMapOuter
 						
 						-- Курсор на палитре
 						local Cursor = utility:RenderObject("Frame", {
@@ -2817,7 +2850,7 @@ local Passed, Statement = pcall(function()
 							Parent = SatVibMap,
 							Position = UDim2.new(s, 0, 1 - v, 0),
 							Size = UDim2.new(0, 8, 0, 8),
-							ZIndex = 9
+							ZIndex = 10
 						})
 						
 						utility:RenderObject("UICorner", {
