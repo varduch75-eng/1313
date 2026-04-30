@@ -2740,8 +2740,8 @@ local Passed, Statement = pcall(function()
 						-- HSV colorpicker (как в Linoria UI, но меньше)
 						local h, s, v = Color3.toHSV(Content.State)
 						
-						-- Размеры: 200x180 (вместо 230x253)
-						local pickerWidth, pickerHeight = 200, 180
+						-- Размеры: 180x160 (еще меньше!)
+						local pickerWidth, pickerHeight = 180, 160
 						local baseX = Content_Holder_Outline.AbsolutePosition.X - Content.Section.Extra.AbsolutePosition.X
 						local baseY = Content_Holder_Outline.AbsolutePosition.Y - Content.Section.Extra.AbsolutePosition.Y + 15
 						
@@ -2784,14 +2784,14 @@ local Passed, Statement = pcall(function()
 							ZIndex = 6
 						})
 						
-						-- SatVib палитра (140x140)
+						-- SatVib палитра (120x120 - меньше!)
 						local SatVibMap = utility:RenderObject("ImageLabel", {
 							BackgroundColor3 = Color3.fromHSV(h, 1, 1),
 							BorderColor3 = Color3.fromRGB(0, 0, 0),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
 							Position = UDim2.new(0, 5, 0, 5),
-							Size = UDim2.new(0, 140, 0, 140),
+							Size = UDim2.new(0, 120, 0, 120),
 							Image = "rbxassetid://4155801252",
 							ZIndex = 7
 						})
@@ -2808,14 +2808,14 @@ local Passed, Statement = pcall(function()
 							ZIndex = 8
 						})
 						
-						-- Hue слайдер (15x140)
+						-- Hue слайдер (15x120 - меньше!)
 						local HueSlider = utility:RenderObject("Frame", {
 							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 							BorderColor3 = Color3.fromRGB(0, 0, 0),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 150, 0, 5),
-							Size = UDim2.new(0, 15, 0, 140),
+							Position = UDim2.new(0, 130, 0, 5),
+							Size = UDim2.new(0, 15, 0, 120),
 							ZIndex = 7
 						})
 						
@@ -2845,14 +2845,14 @@ local Passed, Statement = pcall(function()
 							ZIndex = 8
 						})
 						
-						-- Hex input (Y=150)
+						-- Hex input (Y=130)
 						local HexBox = utility:RenderObject("TextBox", {
 							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 5, 0, 150),
-							Size = UDim2.new(0, 80, 0, 20),
+							Position = UDim2.new(0, 5, 0, 130),
+							Size = UDim2.new(0, 70, 0, 20),
 							Font = "Code",
 							PlaceholderText = "#FFFFFF",
 							Text = "#" .. Content.State:ToHex(),
@@ -2862,14 +2862,14 @@ local Passed, Statement = pcall(function()
 							ClearTextOnFocus = false
 						})
 						
-						-- RGB input (Y=150)
+						-- RGB input (Y=130)
 						local RgbBox = utility:RenderObject("TextBox", {
 							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 90, 0, 150),
-							Size = UDim2.new(0, 105, 0, 20),
+							Position = UDim2.new(0, 80, 0, 130),
+							Size = UDim2.new(0, 90, 0, 20),
 							Font = "Code",
 							PlaceholderText = "255, 255, 255",
 							Text = string.format("%d, %d, %d", 
