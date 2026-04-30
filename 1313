@@ -2737,12 +2737,14 @@ local Passed, Statement = pcall(function()
 						local Connections = {}
 						local InputCheck
 						
-						-- HSV colorpicker (как в Linoria UI)
+						-- Простой RGB colorpicker БЕЗ HSV
 						local currentColor = Content.State
-						local h, s, v = utility:RGBtoHSV(currentColor)
+						local r = math.floor(currentColor.R * 255)
+						local g = math.floor(currentColor.G * 255)
+						local b = math.floor(currentColor.B * 255)
 						
-						-- Размеры и позиция (увеличиваем для HSV палитры)
-						local pickerWidth, pickerHeight = 230, 230
+						-- Размеры и позиция
+						local pickerWidth, pickerHeight = 200, 120
 						local baseX = Content_Holder_Outline.AbsolutePosition.X - Content.Section.Extra.AbsolutePosition.X
 						local baseY = Content_Holder_Outline.AbsolutePosition.Y - Content.Section.Extra.AbsolutePosition.Y + 15
 						
@@ -2786,270 +2788,84 @@ local Passed, Statement = pcall(function()
 							ZIndex = 6
 						})
 						
-						-- Палитра Saturation/Vibrance (большой квадрат)
-						-- Background с цветом (меняется по Hue)
-						local SatVibMapOuter = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromHSV(h, 1, 1),
+						-- RGB Sliders
+						local RSlider = utility:RenderObject("TextBox", {
+							BackgroundColor3 = Color3.fromRGB(50, 50, 50),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
 							Position = UDim2.new(0, 10, 0, 10),
-							Size = UDim2.new(0, 180, 0, 180),
-							ZIndex = 7
-						})
-						
-						-- Saturation слой (белый с прозрачностью слева направо)
-						local SaturationLayer = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-							BorderSizePixel = 0,
-							Parent = SatVibMapOuter,
-							Size = UDim2.new(1, 0, 1, 0),
-							ZIndex = 8
-						})
-						
-						utility:RenderObject("UIGradient", {
-							Rotation = 270,
-							Transparency = NumberSequence.new({
-								NumberSequenceKeypoint.new(0, 0),
-								NumberSequenceKeypoint.new(1, 1)
-							}),
-							Color = ColorSequence.new({
-								ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-								ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-							}),
-							Parent = SaturationLayer
-						})
-						
-						-- Value слой (черный с прозрачностью сверху вниз)
-						local ValueLayer = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-							BorderSizePixel = 0,
-							Parent = SatVibMapOuter,
-							Size = UDim2.new(1, 0, 1, 0),
-							ZIndex = 8
-						})
-						
-						utility:RenderObject("UIGradient", {
-							Transparency = NumberSequence.new({
-								NumberSequenceKeypoint.new(0, 0),
-								NumberSequenceKeypoint.new(1, 1)
-							}),
-							Parent = ValueLayer
-						})
-						
-						-- Используем SatVibMapOuter для кликов
-						local SatVibMap = SatVibMapOuter
-						
-						-- Курсор на палитре
-						local Cursor = utility:RenderObject("Frame", {
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-							BorderColor3 = Color3.fromRGB(0, 0, 0),
-							BorderSizePixel = 2,
-							Parent = SatVibMap,
-							Position = UDim2.new(s, 0, 1 - v, 0),
-							Size = UDim2.new(0, 8, 0, 8),
-							ZIndex = 10
-						})
-						
-						utility:RenderObject("UICorner", {
-							CornerRadius = UDim.new(1, 0),
-							Parent = Cursor
-						})
-						
-						-- Hue slider (вертикальный градиент)
-						local HueSlider = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-							BorderColor3 = Color3.fromRGB(60, 60, 60),
-							BorderSizePixel = 1,
-							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 200, 0, 10),
-							Size = UDim2.new(0, 15, 0, 180),
-							ZIndex = 7
-						})
-						
-						-- Градиент для Hue
-						local HueGradient = utility:RenderObject("UIGradient", {
-							Color = ColorSequence.new({
-								ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-								ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-								ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-								ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-								ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-								ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-								ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-							}),
-							Rotation = 90,
-							Parent = HueSlider
-						})
-						
-						-- Текстовые поля для Hex и RGB
-						local HexBox = utility:RenderObject("TextBox", {
-							BackgroundColor3 = Color3.fromRGB(50, 50, 50),
-							BorderColor3 = Color3.fromRGB(60, 60, 60),
-							BorderSizePixel = 1,
-							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 10, 0, 200),
-							Size = UDim2.new(0, 100, 0, 20),
+							Size = UDim2.new(1, -20, 0, 20),
 							Font = "Code",
-							Text = "#" .. currentColor:ToHex(),
-							TextColor3 = Color3.fromRGB(255, 255, 255),
+							Text = "R: " .. r,
+							TextColor3 = Color3.fromRGB(255, 100, 100),
 							TextSize = 11,
 							ZIndex = 7,
 							ClearTextOnFocus = false
 						})
 						
-						local RgbBox = utility:RenderObject("TextBox", {
+						local GSlider = utility:RenderObject("TextBox", {
 							BackgroundColor3 = Color3.fromRGB(50, 50, 50),
 							BorderColor3 = Color3.fromRGB(60, 60, 60),
 							BorderSizePixel = 1,
 							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 115, 0, 200),
-							Size = UDim2.new(0, 100, 0, 20),
+							Position = UDim2.new(0, 10, 0, 40),
+							Size = UDim2.new(1, -20, 0, 20),
 							Font = "Code",
-							Text = string.format("%d, %d, %d", math.floor(currentColor.R * 255), math.floor(currentColor.G * 255), math.floor(currentColor.B * 255)),
-							TextColor3 = Color3.fromRGB(255, 255, 255),
+							Text = "G: " .. g,
+							TextColor3 = Color3.fromRGB(100, 255, 100),
 							TextSize = 11,
 							ZIndex = 7,
 							ClearTextOnFocus = false
 						})
 						
-						-- Функция обновления всех элементов
-						local function updateDisplay()
-							local newColor = Color3.fromHSV(h, s, v)
-							SatVibMapOuter.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-							Cursor.Position = UDim2.new(s, 0, 1 - v, 0)
-							HexBox.Text = "#" .. newColor:ToHex()
-							RgbBox.Text = string.format("%d, %d, %d", math.floor(newColor.R * 255), math.floor(newColor.G * 255), math.floor(newColor.B * 255))
+						local BSlider = utility:RenderObject("TextBox", {
+							BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+							BorderColor3 = Color3.fromRGB(60, 60, 60),
+							BorderSizePixel = 1,
+							Parent = Open_Outline_Frame,
+							Position = UDim2.new(0, 10, 0, 70),
+							Size = UDim2.new(1, -20, 0, 20),
+							Font = "Code",
+							Text = "B: " .. b,
+							TextColor3 = Color3.fromRGB(100, 100, 255),
+							TextSize = 11,
+							ZIndex = 7,
+							ClearTextOnFocus = false
+						})
+						
+						-- Функция обновления
+						local function updateColor()
+							local newColor = Color3.fromRGB(r, g, b)
 							Content:Set(newColor)
 						end
 						
-						-- Обработчики для палитры Saturation/Vibrance
-						local draggingSV = false
-						Connections[#Connections + 1] = utility:CreateConnection(SatVibMap.InputBegan, function(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 then
-								draggingSV = true
-								local mouse = utility:MouseLocation()
-								local relX = math.clamp(mouse.X - SatVibMap.AbsolutePosition.X, 0, SatVibMap.AbsoluteSize.X)
-								local relY = math.clamp(mouse.Y - SatVibMap.AbsolutePosition.Y, 0, SatVibMap.AbsoluteSize.Y)
-								s = relX / SatVibMap.AbsoluteSize.X
-								v = 1 - (relY / SatVibMap.AbsoluteSize.Y)
-								updateDisplay()
+						-- Обработчики
+						Connections[#Connections + 1] = utility:CreateConnection(RSlider.FocusLost, function()
+							local val = tonumber(RSlider.Text:match("%d+"))
+							if val then
+								r = math.clamp(val, 0, 255)
+								RSlider.Text = "R: " .. r
+								updateColor()
 							end
 						end)
 						
-						Connections[#Connections + 1] = utility:CreateConnection(uis.InputChanged, function(input)
-							if draggingSV and input.UserInputType == Enum.UserInputType.MouseMovement then
-								local mouse = utility:MouseLocation()
-								local relX = math.clamp(mouse.X - SatVibMap.AbsolutePosition.X, 0, SatVibMap.AbsoluteSize.X)
-								local relY = math.clamp(mouse.Y - SatVibMap.AbsolutePosition.Y, 0, SatVibMap.AbsoluteSize.Y)
-								s = relX / SatVibMap.AbsoluteSize.X
-								v = 1 - (relY / SatVibMap.AbsoluteSize.Y)
-								updateDisplay()
+						Connections[#Connections + 1] = utility:CreateConnection(GSlider.FocusLost, function()
+							local val = tonumber(GSlider.Text:match("%d+"))
+							if val then
+								g = math.clamp(val, 0, 255)
+								GSlider.Text = "G: " .. g
+								updateColor()
 							end
 						end)
 						
-						Connections[#Connections + 1] = utility:CreateConnection(uis.InputEnded, function(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 then
-								draggingSV = false
+						Connections[#Connections + 1] = utility:CreateConnection(BSlider.FocusLost, function()
+							local val = tonumber(BSlider.Text:match("%d+"))
+							if val then
+								b = math.clamp(val, 0, 255)
+								BSlider.Text = "B: " .. b
+								updateColor()
 							end
-						end)
-						
-						-- Обработчики для Hue slider
-						local draggingHue = false
-						Connections[#Connections + 1] = utility:CreateConnection(HueSlider.InputBegan, function(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 then
-								draggingHue = true
-								local mouse = utility:MouseLocation()
-								local relY = math.clamp(mouse.Y - HueSlider.AbsolutePosition.Y, 0, HueSlider.AbsoluteSize.Y)
-								h = relY / HueSlider.AbsoluteSize.Y
-								updateDisplay()
-							end
-						end)
-						
-						Connections[#Connections + 1] = utility:CreateConnection(uis.InputChanged, function(input)
-							if draggingHue and input.UserInputType == Enum.UserInputType.MouseMovement then
-								local mouse = utility:MouseLocation()
-								local relY = math.clamp(mouse.Y - HueSlider.AbsolutePosition.Y, 0, HueSlider.AbsoluteSize.Y)
-								h = relY / HueSlider.AbsoluteSize.Y
-								updateDisplay()
-							end
-						end)
-						
-						Connections[#Connections + 1] = utility:CreateConnection(uis.InputEnded, function(input)
-							if input.UserInputType == Enum.UserInputType.MouseButton1 then
-								draggingHue = false
-							end
-						end)
-						
-						-- Обработчики для текстовых полей
-						Connections[#Connections + 1] = utility:CreateConnection(HexBox.FocusLost, function()
-							local hex = HexBox.Text:gsub("#", "")
-							local success, result = pcall(function()
-								return Color3.fromHex(hex)
-							end)
-							if success then
-								h, s, v = utility:RGBtoHSV(result)
-								updateDisplay()
-							else
-								HexBox.Text = "#" .. Color3.fromHSV(h, s, v):ToHex()
-							end
-						end)
-						
-						Connections[#Connections + 1] = utility:CreateConnection(RgbBox.FocusLost, function()
-							local r, g, b = RgbBox.Text:match("(%d+),%s*(%d+),%s*(%d+)")
-							if r and g and b then
-								r, g, b = tonumber(r), tonumber(g), tonumber(b)
-								if r and g and b and r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
-									local newColor = Color3.fromRGB(r, g, b)
-									h, s, v = utility:RGBtoHSV(newColor)
-									updateDisplay()
-								else
-									local color = Color3.fromHSV(h, s, v)
-									RgbBox.Text = string.format("%d, %d, %d", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
-								end
-							else
-								local color = Color3.fromHSV(h, s, v)
-								RgbBox.Text = string.format("%d, %d, %d", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
-							end
-						end)
-						
-						-- Кнопки
-						local AcceptButton = utility:RenderObject("TextButton", {
-							BackgroundColor3 = Color3.fromRGB(60, 120, 60),
-							BorderColor3 = Color3.fromRGB(80, 80, 80),
-							BorderSizePixel = 1,
-							Parent = Open_Outline_Frame,
-							Position = UDim2.new(0, 10, 1, -25),
-							Size = UDim2.new(0, 60, 0, 18),
-							ZIndex = 7,
-							Font = "Code",
-							Text = "OK",
-							TextColor3 = Color3.fromRGB(255, 255, 255),
-							TextSize = 9
-						})
-						
-						local CancelButton = utility:RenderObject("TextButton", {
-							BackgroundColor3 = Color3.fromRGB(120, 60, 60),
-							BorderColor3 = Color3.fromRGB(80, 80, 80),
-							BorderSizePixel = 1,
-							Parent = Open_Outline_Frame,
-							Position = UDim2.new(1, -70, 1, -25),
-							Size = UDim2.new(0, 60, 0, 18),
-							ZIndex = 7,
-							Font = "Code",
-							Text = "Cancel",
-							TextColor3 = Color3.fromRGB(255, 255, 255),
-							TextSize = 9
-						})
-						
-						Connections[#Connections + 1] = utility:CreateConnection(AcceptButton.MouseButton1Click, function()
-							Content.Section:CloseContent()
-						end)
-						
-						Connections[#Connections + 1] = utility:CreateConnection(CancelButton.MouseButton1Click, function()
-							Content:Set(currentColor)
-							Content.Section:CloseContent()
 						end)
 						
 						-- Функции управления
