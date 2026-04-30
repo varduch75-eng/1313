@@ -2732,6 +2732,7 @@ local Passed, Statement = pcall(function()
 					end
 					--
 					function Content:Open()
+						print("🔴 DEBUG: Content:Open вызван! Версия: RGB Sliders v2")
 						Content.Section:CloseContent()
 						
 						local Connections = {}
@@ -2742,6 +2743,8 @@ local Passed, Statement = pcall(function()
 						local r = math.floor(currentColor.R * 255)
 						local g = math.floor(currentColor.G * 255)
 						local b = math.floor(currentColor.B * 255)
+						
+						print("🔴 DEBUG: RGB values:", r, g, b)
 						
 						-- Размеры и позиция
 						local pickerWidth, pickerHeight = 200, 120
