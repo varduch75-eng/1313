@@ -741,7 +741,7 @@ function library:CreatePage(Properties)
 	--
 	local Page = {
 		Image = (Properties.image or Properties.Image or Properties.icon or Properties.Icon),
-		Size = (Properties.size or Properties.Size or UDim2.new(0, 50, 0, 50)),
+		Size = (Properties.size or Properties.Size or UDim2.new(0, 60, 0, 60)),
 		Open = false,
 		Window = self
 	}
