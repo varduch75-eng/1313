@@ -2760,15 +2760,18 @@ local Passed, Statement = pcall(function()
 						baseY = checkedY - Content.Section.Extra.AbsolutePosition.Y
 						
 						local Content_Open_Holder = utility:RenderObject("Frame", {
-							BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-							BackgroundTransparency = 1,
+							BackgroundColor3 = Color3.fromRGB(0, 255, 0), -- ЗЕЛЕНЫЙ для debug!
+							BackgroundTransparency = 0, -- ВИДИМЫЙ для debug!
 							BorderColor3 = Color3.fromRGB(0, 0, 0),
-							BorderSizePixel = 0,
+							BorderSizePixel = 2,
 							Parent = Content.Section.Extra,
 							Position = UDim2.new(0, baseX, 0, baseY),
 							Size = UDim2.new(0, pickerWidth, 0, pickerHeight),
 							ZIndex = 6
 						})
+						
+						print("🔴 DEBUG: Content_Open_Holder создан! Размер:", pickerWidth, pickerHeight)
+						print("🔴 DEBUG: Позиция:", baseX, baseY)
 						
 						local Open_Holder_Outline = utility:RenderObject("Frame", {
 							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
